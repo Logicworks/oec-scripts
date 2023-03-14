@@ -2,9 +2,9 @@ import argparse
 import json
 import logging
 import sys
+from os import environ
 
 import requests
-from requests.auth import HTTPBasicAuth
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-payload', '--queuePayload', help='Payload from queue', required=True)
@@ -14,6 +14,7 @@ parser.add_argument('-logLevel', '--logLevel', help='Level of log', required=Tru
 parser.add_argument('-url', '--url', help='URL', required=False)
 parser.add_argument('-username', '--username', help='Username', required=False)
 parser.add_argument('-password', '--password', help='Password', required=False)
+parser.add_argument('-apikey', '--apikey', help='JSM API Key', required=False)
 parser.add_argument('-key', '--key', help='Project key', required=False)
 parser.add_argument('-issueTypeName', '--issueTypeName', help='Issue Type', required=False)
 args = vars(parser.parse_args())
@@ -22,7 +23,8 @@ logging.basicConfig(stream=sys.stdout, level=args['logLevel'])
 
 
 def parse_field(key, mandatory):
-    variable = queue_message.get(key)
+    env_var = "JSM_" + key.upper()
+    variable = queue_message.get(key, environ.get(env_var))
     if not variable:
         variable = args.get(key)
     if mandatory and not variable:
@@ -82,7 +84,7 @@ def main():
     timeout = parse_timeout()
     url = parse_field('url', True)
     username = parse_field('username', True)
-    password = parse_field('password', True)
+    token = parse_field('apikey', True)
     project_key = parse_field('key', False)
     issue_type_name = parse_field('issueTypeName', False)
 
@@ -96,10 +98,10 @@ def main():
 
     content_params = dict()
 
-    token = HTTPBasicAuth(username, password)
     headers = {
         "Content-Type": "application/json",
-        "Accept-Language": "application/json"
+        "Accept-Language": "application/json",
+        "Authorization": "Bearer " + token        
     }
 
     result_url = url + "/rest/api/2/issue"
